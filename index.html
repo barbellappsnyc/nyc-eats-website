@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Eats: Gourmet Passports</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+
+    <style>
+        /* BASE STYLES & FONTS */
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:wght@400;800&display=swap');
+
+        :root {
+            --garamond: 'AppleGaramond', 'EB Garamond', Garamond, serif;
+            --courier: 'Courier Prime', Courier, monospace;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #050505; /* Pitch black base */
+            color: white;
+            overflow-x: hidden;
+            font-family: var(--garamond);
+        }
+
+        /* LAYER 1: PURE CODE BOKEH (Canvas) */
+        #bokeh-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* LAYER 2: FOGGY WINDOW GLASS */
+        .glass-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.20);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* SCROLL CONTAINER */
+        .scroll-container {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* SECTIONS */
+        .section {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* PHASE 1: TYPING */
+        .phrase-container {
+            text-align: center;
+            position: fixed; /* Pinned to center */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            opacity: 0;
+        }
+
+        .typing-text {
+            font-size: 42px;
+            letter-spacing: 1.2px;
+            margin: 0;
+        }
+
+        .cursor {
+            font-weight: 300;
+            animation: blink 1s step-end infinite;
+        }
+
+        .translation {
+            font-family: var(--courier);
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 4.0px;
+            color: rgba(255, 255, 255, 0.54);
+            margin-top: 16px;
+            opacity: 0;
+        }
+
+        /* PHASE 2: LOGO */
+        .logo-container {
+            text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .logo-title {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 6.0px;
+            margin: 0 0 12px 0;
+        }
+
+        .logo-subtitle {
+            font-family: var(--courier);
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 8.0px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0 0 40px 0;
+        }
+
+        .app-store-btn {
+            display: inline-block;
+            width: 200px; /* Adjust based on your asset */
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .app-store-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* FOOTER FOR LEGAL LINKS */
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-family: var(--garamond);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            z-index: 10;
+        }
+        .footer a {
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer a:hover {
+            color: white;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bokeh-canvas"></canvas>
+
+    <div class="glass-overlay"></div>
+
+    <div class="scroll-container">
+        
+        <div class="section" id="spacer"></div>
+
+        <div class="phrase-container">
+            <h1 class="typing-text"><span id="typewriter"></span><span class="cursor">|</span></h1>
+            <div class="translation" id="translationText"></div>
+        </div>
+
+        <div class="logo-container">
+            <h1 class="logo-title">NYC EATS</h1>
+            <p class="logo-subtitle">GOURMET PASSPORTS</p>
+            <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" class="app-store-btn">
+        </div>
+
+        <div class="section" id="trigger-1"></div>
+        <div class="section" id="trigger-2"></div>
+    </div>
+
+    <div class="footer">
+        <span>© 2026 Barbell Apps</span>
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms of Service</a>
+    </div>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger, TextPlugin);
+
+        // ----------------------------------------------------------------
+        // 1. THE RANDOM PHRASE GENERATOR (Mirroring Dart logic)
+        // ----------------------------------------------------------------
+        const phrases = [
+            { phrase: 'Itadakimasu.', translation: 'I HUMBLY RECEIVE.' },
+            { phrase: 'Bon Appétit.', translation: 'ENJOY YOUR MEAL.' },
+            { phrase: 'Buen Provecho.', translation: 'GOOD BENEFIT.' },
+            { phrase: '¡Salud!', translation: 'TO YOUR HEALTH.' },
+            { phrase: 'Mangia bene.', translation: 'EAT WELL.' },
+            { phrase: 'Skål!', translation: 'GOOD HEALTH.' },
+            { phrase: 'L\'chaim!', translation: 'TO LIFE.' }
+        ];
+        
+        const selected = phrases[Math.floor(Math.random() * phrases.length)];
+        document.getElementById('translationText').innerText = selected.translation;
+
+        // ----------------------------------------------------------------
+        // 2. THE GSAP SCROLL ANIMATIONS
+        // ----------------------------------------------------------------
+        
+        // Scroll 1: Fade in the phrase container, type the text, fade in translation
+        let tl1 = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#trigger-1",
+                start: "top center",
+                once: true // Ensures it types out once and doesn't reverse if they scroll up
+            }
+        });
+
+        tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
+           .to("#typewriter", { 
+               duration: selected.phrase.length * 0.1, // Matches your 110ms timer in Dart
+               text: selected.phrase, 
+               ease: "none" 
+           })
+           .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.5"); // Pauses, then fades in
+
+        // Scroll 2: Fade out phrase, Fade in Logo + App Store
+        let tl2 = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#trigger-2",
+                start: "top center",
+                toggleActions: "play none none reverse" 
+            }
+        });
+
+        tl2.to(".phrase-container", { opacity: 0, duration: 0.5 })
+           .set(".logo-container", { visibility: "visible" })
+           .to(".logo-container", { opacity: 1, duration: 1.0, ease: "power2.out" });
+
+
+        // ----------------------------------------------------------------
+        // 3. THE CANVAS BOKEH ENGINE (Translating the Dart CustomPainter)
+        // ----------------------------------------------------------------
+        const canvas = document.getElementById('bokeh-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        const lights = [];
+        // Matches your Apple Red, Warm Amber, Headlight White, Neon Blue from Dart
+        const colors = [
+            'rgba(255, 59, 48, 0.5)', 
+            'rgba(255, 204, 0, 0.4)', 
+            'rgba(255, 255, 255, 0.2)', 
+            'rgba(0, 122, 255, 0.2)'
+        ];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Generate the 25 lights
+        for (let i = 0; i < 25; i++) {
+            lights.push({
+                xOffset: Math.random(),
+                yOffset: Math.random(),
+                radius: Math.random() * 60 + 20, // Between 20 and 80
+                speed: Math.random() * 0.5 + 0.1,
+                color: colors[Math.floor(Math.random() * colors.length)]
+            });
+        }
+
+        let time = 0;
+        function animateBokeh() {
+            // Clear screen with pitch black
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, width, height);
+
+            time += 0.002; // Controls overall progression
+
+            lights.forEach(light => {
+                // Calculate position just like the Dart code
+                let x = (light.xOffset * width) - (time * width * light.speed);
+                let y = (light.yOffset * height) + (Math.sin(time * Math.PI * 2 + light.speed) * 30);
+
+                // Wrap around
+                x = x % width;
+                if (x < 0) x += width;
+
+                // Draw glowing orb (Simulating MaskFilter.blur)
+                ctx.beginPath();
+                ctx.arc(x, y, light.radius, 0, Math.PI * 2);
+                ctx.fillStyle = light.color;
+                ctx.shadowBlur = 30; // Creates the soft glow
+                ctx.shadowColor = light.color;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(animateBokeh);
+        }
+
+        animateBokeh();
+    </script>
+</body>
+</html>
