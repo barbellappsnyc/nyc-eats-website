@@ -212,6 +212,9 @@
             { phrase: 'Skål!', translation: 'GOOD HEALTH.' },
             { phrase: 'L\'chaim!', translation: 'TO LIFE.' }
         ];
+
+        // Load the sound file
+        const tapSound = new Audio('tap.mp3');
         
         const selected = phrases[Math.floor(Math.random() * phrases.length)];
         document.getElementById('translationText').innerText = selected.translation;
@@ -231,9 +234,16 @@
 
         tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
            .to("#typewriter", { 
-               duration: selected.phrase.length * 0.1, // Matches your 110ms timer in Dart
+               duration: selected.phrase.length * 0.1,
                text: selected.phrase, 
-               ease: "none" 
+               ease: "none",
+               onUpdate: function() {
+                   // Clone the audio node so rapid rapid taps don't cut each other off
+                   let clone = tapSound.cloneNode();
+                   clone.volume = 0.2; // Keep it subtle!
+                   // Play the sound, but catch and ignore the error if Safari blocks autoplay
+                   clone.play().catch(e => {}); 
+               }
            })
            .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.5"); // Pauses, then fades in
 
