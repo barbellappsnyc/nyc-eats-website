@@ -8,15 +8,23 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:wght@400;800&display=swap');
         body {
-            /* The dark overlay + your background image */
-            background-image: linear-gradient(rgba(5, 5, 5, 0.85), rgba(5, 5, 5, 0.85)), url('background.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed; /* Keeps image still while scrolling */
-            
             color: rgba(255,255,255,0.8);
             font-family: 'EB Garamond', Garamond, serif;
             margin: 0; padding: 40px 20px; line-height: 1.6;
+        }
+
+        /* The Mobile-Safe Fixed Background Trick */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: linear-gradient(rgba(5, 5, 5, 0.85), rgba(5, 5, 5, 0.85)), url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
         }
         .container { max-width: 800px; margin: 0 auto; }
         h1, h2 { color: white; letter-spacing: 1px; }
