@@ -89,7 +89,7 @@
         .logo-container {
             text-align: center;
             position: fixed;
-            top: 50%; 
+            top: 50%; /* Reverted to center */
             left: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
@@ -176,6 +176,7 @@
         <span>© 2026 Barbell Apps</span>
         <a href="privacy.html">Privacy Policy</a>
         <a href="terms.html">Terms of Service</a>
+        <!-- Contact Me Link Added -->
         <a href="mailto:concierge@gourmetpassports.com">Contact Me</a>
     </div>
 
@@ -197,39 +198,34 @@
         const selected = phrases[Math.floor(Math.random() * phrases.length)];
         document.getElementById('translationText').innerText = selected.translation;
 
-        // 2. STATE MACHINE (Strict logic requiring manual triggers)
-        let hasStartedTyping = false;
+        // 2. STATE MACHINE (Replaces native ScrollTrigger for strict logic)
         let typingFinished = false;
         let transitionQueued = false;
         let phase2Active = false;
 
-        function startTypingSequence() {
-            if (hasStartedTyping) return;
-            hasStartedTyping = true;
-
-            let tl1 = gsap.timeline({
-                onComplete: () => {
-                    typingFinished = true;
-                    // If user tried to scroll while typing, trigger the fade now
-                    if (transitionQueued) {
-                        setTimeout(transitionToLogo, 400); 
-                    }
+        // Start typing animation immediately on load
+        let tl1 = gsap.timeline({
+            onComplete: () => {
+                typingFinished = true;
+                // If user tried to scroll while typing, trigger the fade now
+                if (transitionQueued) {
+                    setTimeout(transitionToLogo, 400); 
                 }
-            });
+            }
+        });
 
-            tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
-               .to("#typewriter", { 
-                   duration: selected.phrase.length * 0.1,
-                   text: selected.phrase, 
-                   ease: "none",
-                   onUpdate: function() {
-                       let clone = tapSound.cloneNode();
-                       clone.volume = 0.2;
-                       clone.play().catch(e => {}); 
-                   }
-               })
-               .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.2");
-        }
+        tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
+           .to("#typewriter", { 
+               duration: selected.phrase.length * 0.1,
+               text: selected.phrase, 
+               ease: "none",
+               onUpdate: function() {
+                   let clone = tapSound.cloneNode();
+                   clone.volume = 0.2;
+                   clone.play().catch(e => {}); 
+               }
+           })
+           .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.2");
 
         // Listen for scroll intent (mouse wheel or trackpad)
         window.addEventListener('wheel', (e) => {
@@ -247,15 +243,10 @@
         function handleScrollIntent() {
             if (phase2Active) return; // Lockout once in Phase 2
 
-            if (!hasStartedTyping) {
-                // First scroll intent: Start the typing!
-                startTypingSequence();
-            } else if (!typingFinished) {
-                // Scrolled again while typing: Queue up the next phase
-                transitionQueued = true; 
+            if (!typingFinished) {
+                transitionQueued = true; // Queue it up for when typing finishes
             } else {
-                // Scrolled after typing finished: Transition immediately
-                transitionToLogo(); 
+                transitionToLogo(); // Typing is done, transition immediately
             }
         }
 
@@ -265,6 +256,7 @@
 
             let tl2 = gsap.timeline();
             
+            // Reverted to your original smooth crossfade logic
             tl2.to(".phrase-container", { opacity: 0, duration: 0.5 })
                .set(".logo-container", { visibility: "visible" })
                .to(".logo-container", { opacity: 1, duration: 1.0, ease: "power2.out" });
