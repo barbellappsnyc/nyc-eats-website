@@ -7,7 +7,6 @@
     <link rel="icon" type="image/png" href="favicon.png?v=2">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
 
     <style>
@@ -22,9 +21,9 @@
         body, html {
             margin: 0;
             padding: 0;
-            background-color: #050505; /* Pitch black base */
+            background-color: #050505;
             color: white;
-            overflow-x: hidden;
+            overflow: hidden; /* Scroll locked entirely. JS handles the movement. */
             font-family: var(--garamond);
         }
 
@@ -53,32 +52,16 @@
             pointer-events: none;
         }
 
-        /* SCROLL CONTAINER */
-        .scroll-container {
-            position: relative;
-            z-index: 2;
-        }
-
-        /* SECTIONS */
-        .section {
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
         /* PHASE 1: TYPING */
         .phrase-container {
             text-align: center;
-            position: fixed; /* Pinned to center */
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
             opacity: 0;
+            z-index: 2;
         }
 
         .typing-text {
@@ -106,12 +89,13 @@
         .logo-container {
             text-align: center;
             position: fixed;
-            top: 50%;
+            top: 120%; /* Starts below the screen for the scroll effect */
             left: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
             opacity: 0;
             visibility: hidden;
+            z-index: 2;
         }
 
         .logo-title {
@@ -132,7 +116,7 @@
 
         .app-store-btn {
             display: inline-block;
-            width: 200px; /* Adjust based on your asset */
+            width: 200px;
             transition: transform 0.2s ease;
             cursor: pointer;
         }
@@ -156,6 +140,7 @@
             color: rgba(255, 255, 255, 0.4);
             text-decoration: none;
             margin: 0 10px;
+            transition: color 0.2s;
         }
         .footer a:hover {
             color: white;
@@ -173,37 +158,32 @@
 
     <div class="glass-overlay"></div>
 
-    <div class="scroll-container">
-        
-        <div class="section" id="spacer"></div>
+    <div class="phrase-container">
+        <h1 class="typing-text"><span id="typewriter"></span><span class="cursor">|</span></h1>
+        <div class="translation" id="translationText"></div>
+    </div>
 
-        <div class="phrase-container">
-            <h1 class="typing-text"><span id="typewriter"></span><span class="cursor">|</span></h1>
-            <div class="translation" id="translationText"></div>
-        </div>
-
-        <div class="logo-container">
-            <h1 class="logo-title">NYC EATS</h1>
-            <p class="logo-subtitle">GOURMET PASSPORTS</p>
+    <div class="logo-container">
+        <h1 class="logo-title">NYC EATS</h1>
+        <p class="logo-subtitle">GOURMET PASSPORTS</p>
+        <!-- App Store Link Wired Up -->
+        <a href="https://apps.apple.com/in/app/nyc-eats-gourmet-passports/id6761528193" target="_blank">
             <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" class="app-store-btn">
-        </div>
-
-        <div class="section" id="trigger-1"></div>
-        <div class="section" id="trigger-2"></div>
+        </a>
     </div>
 
     <div class="footer">
         <span>© 2026 Barbell Apps</span>
         <a href="privacy.html">Privacy Policy</a>
         <a href="terms.html">Terms of Service</a>
+        <!-- Contact Me Link Added -->
+        <a href="mailto:concierge@gourmetpassports.com">Contact Me</a>
     </div>
 
     <script>
-        gsap.registerPlugin(ScrollTrigger, TextPlugin);
+        gsap.registerPlugin(TextPlugin);
 
-        // ----------------------------------------------------------------
-        // 1. THE RANDOM PHRASE GENERATOR (Mirroring Dart logic)
-        // ----------------------------------------------------------------
+        // 1. THE RANDOM PHRASE GENERATOR
         const phrases = [
             { phrase: 'Itadakimasu.', translation: 'I HUMBLY RECEIVE.' },
             { phrase: 'Bon Appétit.', translation: 'ENJOY YOUR MEAL.' },
@@ -214,63 +194,71 @@
             { phrase: 'L\'chaim!', translation: 'TO LIFE.' }
         ];
 
-        // Load the sound file
         const tapSound = new Audio('tap.mp3');
-        
         const selected = phrases[Math.floor(Math.random() * phrases.length)];
         document.getElementById('translationText').innerText = selected.translation;
 
-        // ----------------------------------------------------------------
-        // 2. THE GSAP SCROLL ANIMATIONS
-        // ----------------------------------------------------------------
-        
-        // Scroll 1: Fade in the phrase container, type the text, fade in translation
-        let tl1 = gsap.timeline({
-            scrollTrigger: {
-                trigger: "#trigger-1",
-                start: "top center",
-                once: true // Ensures it types out once and doesn't reverse if they scroll up
-            }
+        // 2. STATE MACHINE ANIMATIONS (Replaces native ScrollTrigger)
+        let hasStarted = false;
+
+        // Listen for scroll intent (mouse wheel)
+        window.addEventListener('wheel', (e) => {
+            if (e.deltaY > 0) initiateSequence();
         });
 
-        tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
-           .to("#typewriter", { 
-               duration: selected.phrase.length * 0.1,
-               text: selected.phrase, 
-               ease: "none",
-               onUpdate: function() {
-                   // Clone the audio node so rapid rapid taps don't cut each other off
-                   let clone = tapSound.cloneNode();
-                   clone.volume = 0.2; // Keep it subtle!
-                   // Play the sound, but catch and ignore the error if Safari blocks autoplay
-                   clone.play().catch(e => {}); 
-               }
-           })
-           .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.5"); // Pauses, then fades in
-
-        // Scroll 2: Fade out phrase, Fade in Logo + App Store
-        let tl2 = gsap.timeline({
-            scrollTrigger: {
-                trigger: "#trigger-2",
-                start: "top center",
-                toggleActions: "play none none reverse" 
-            }
+        // Listen for scroll intent (touch swipe down)
+        let touchStartY = 0;
+        window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+        window.addEventListener('touchmove', e => {
+            let touchEndY = e.touches[0].clientY;
+            if (touchStartY - touchEndY > 30) initiateSequence();
         });
 
-        tl2.to(".phrase-container", { opacity: 0, duration: 0.5 })
-           .set(".logo-container", { visibility: "visible" })
-           .to(".logo-container", { opacity: 1, duration: 1.0, ease: "power2.out" });
+        function initiateSequence() {
+            // Lock out multiple triggers
+            if (hasStarted) return;
+            hasStarted = true;
 
+            // Phase 1: Typing Animation
+            let tl1 = gsap.timeline({
+                onComplete: () => {
+                    // Force the "scroll" downwards 800ms after typing finishes
+                    setTimeout(pushWebsiteDownwards, 800);
+                }
+            });
 
-        // ----------------------------------------------------------------
-        // 3. THE CANVAS BOKEH ENGINE (Translating the Dart CustomPainter)
-        // ----------------------------------------------------------------
+            tl1.to(".phrase-container", { opacity: 1, duration: 0.5 })
+               .to("#typewriter", { 
+                   duration: selected.phrase.length * 0.1,
+                   text: selected.phrase, 
+                   ease: "none",
+                   onUpdate: function() {
+                       let clone = tapSound.cloneNode();
+                       clone.volume = 0.2;
+                       clone.play().catch(e => {}); 
+                   }
+               })
+               .to(".translation", { opacity: 1, duration: 0.8 }, "+=0.2");
+        }
+
+        function pushWebsiteDownwards() {
+            let tl2 = gsap.timeline();
+            
+            // Slide phrase UP and out
+            tl2.to(".phrase-container", { top: "20%", opacity: 0, duration: 1.2, ease: "power2.inOut" }, 0)
+               // Set logo to visible, slide UP into center
+               .set(".logo-container", { visibility: "visible" }, 0)
+               .to(".logo-container", { top: "50%", opacity: 1, duration: 1.2, ease: "power2.out" }, 0);
+               
+            // Website remains locked here. Native scroll is never re-enabled.
+        }
+
+        // 3. THE CANVAS BOKEH ENGINE
         const canvas = document.getElementById('bokeh-canvas');
         const ctx = canvas.getContext('2d');
         
         let width, height;
         const lights = [];
-        // Matches your Apple Red, Warm Amber, Headlight White, Neon Blue from Dart
         const colors = [
             'rgba(255, 59, 48, 0.5)', 
             'rgba(255, 204, 0, 0.4)', 
@@ -287,12 +275,11 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Generate the 25 lights
         for (let i = 0; i < 25; i++) {
             lights.push({
                 xOffset: Math.random(),
                 yOffset: Math.random(),
-                radius: Math.random() * 60 + 20, // Between 20 and 80
+                radius: Math.random() * 60 + 20,
                 speed: Math.random() * 0.5 + 0.1,
                 color: colors[Math.floor(Math.random() * colors.length)]
             });
@@ -300,26 +287,22 @@
 
         let time = 0;
         function animateBokeh() {
-            // Clear screen with pitch black
             ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, width, height);
 
-            time += 0.002; // Controls overall progression
+            time += 0.002;
 
             lights.forEach(light => {
-                // Calculate position just like the Dart code
                 let x = (light.xOffset * width) - (time * width * light.speed);
                 let y = (light.yOffset * height) + (Math.sin(time * Math.PI * 2 + light.speed) * 30);
 
-                // Wrap around
                 x = x % width;
                 if (x < 0) x += width;
 
-                // Draw glowing orb (Simulating MaskFilter.blur)
                 ctx.beginPath();
                 ctx.arc(x, y, light.radius, 0, Math.PI * 2);
                 ctx.fillStyle = light.color;
-                ctx.shadowBlur = 30; // Creates the soft glow
+                ctx.shadowBlur = 30;
                 ctx.shadowColor = light.color;
                 ctx.fill();
             });
