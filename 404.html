@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Redirecting to NYC Eats...</title>
+    <script>
+        // Check if the incoming URL path starts with "/list/"
+        if (window.location.pathname.startsWith('/list/')) {
+            // It's a shared list! Instantly bounce them to the App Store.
+            window.location.replace("https://apps.apple.com/in/app/nyc-eats-gourmet-passports/id6761528193");
+        } else {
+            // It's a normal broken link on your website. Send them home.
+            window.location.replace("/");
+        }
+    </script>
+</head>
+<body style="background-color: #FDFBF7; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: -apple-system, sans-serif;">
+    <h2 style="color: #3D0A1A; font-weight: 600;">Opening NYC Eats...</h2>
+</body>
+</html>
