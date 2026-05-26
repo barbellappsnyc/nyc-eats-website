@@ -1,19 +1,25 @@
 import React from 'react';
 import { ImageResponse } from '@vercel/og';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// 1. Turn the Ferrari engine back on
+export const config = {
+  runtime: 'edge',
+};
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   try {
-    // 1. Extract the list ID from the URL (e.g., ?list=123)
-    const listId = req.query.list;
+    // 2. Extract the list ID from the URL (Edge style)
+    const { searchParams } = new URL(req.url);
+    const listId = searchParams.get('list');
 
     if (!listId) {
-      return res.status(400).send('Missing list ID');
+      return new Response('Missing list ID', { status: 400 });
     }
 
-    // 2. Fetch directly from Supabase REST API (No heavy modules required)
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    // 3. Fetch directly from Supabase (Lightweight, Edge-friendly)
     const response = await fetch(
       `${supabaseUrl}/rest/v1/user_lists?id=eq.${listId}&select=title,subtitle,restaurants,username`,
       {
@@ -28,7 +34,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (!data || data.length === 0) {
-      return res.status(404).send('List not found');
+      return new Response('List not found', { status: 404 });
     }
 
     const listData = data[0];
@@ -37,8 +43,8 @@ export default async function handler(req, res) {
     const username = listData.username || 'anonymous';
     const restaurants = Array.isArray(listData.restaurants) ? listData.restaurants.slice(0, 4) : [];
 
-    // 3. Render the dynamic premium poster
-    const image = new ImageResponse(
+    // 4. Return the ImageResponse directly! Vercel handles the PNG conversion automatically.
+    return new ImageResponse(
       (
         <div
           style={{
@@ -132,16 +138,7 @@ export default async function handler(req, res) {
         height: 630, 
       }
     );
-
-    // 4. Convert the response to a buffer and serve it as a pure PNG image
-    const arrayBuffer = await image.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.status(200).send(buffer);
-
   } catch (e) {
-    res.status(500).send(`Failed to generate card: ${e.message}`);
+    return new Response(`Failed to generate card: ${e.message}`, { status: 500 });
   }
 }
