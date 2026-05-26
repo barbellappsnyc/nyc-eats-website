@@ -1,0 +1,10 @@
+{
+  "name": "nyc-eats-web-engine",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@vercel/og": "^0.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
