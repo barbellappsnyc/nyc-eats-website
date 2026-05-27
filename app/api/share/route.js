@@ -3,10 +3,8 @@ import { ImageResponse } from 'next/og';
 // Turn on the Ferrari Edge Engine
 export const runtime = 'edge';
 
-// In Next.js, API routes use the GET function
 export async function GET(request) {
   try {
-    // 1. Extract the list ID from the URL
     const { searchParams } = new URL(request.url);
     const listId = searchParams.get('list');
 
@@ -17,46 +15,53 @@ export async function GET(request) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-    // 2. Fetch directly from Supabase (Lightweight, Edge-friendly)
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/user_lists?id=eq.${listId}&select=title,subtitle,restaurants,username`,
-      {
-        headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Content-Type': 'application/json'
-        }
+    const headers = {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'Content-Type': 'application/json'
+    };
+
+    // 1. Fetch the Core List Data
+    const listRes = await fetch(`${supabaseUrl}/rest/v1/user_lists?id=eq.${listId}&select=title,subtitle,user_id`, { headers });
+    const listDataRaw = await listRes.json();
+
+    if (!Array.isArray(listDataRaw)) {
+      return new Response(`Supabase rejected the list query: ${JSON.stringify(listDataRaw)}`, { status: 500 });
+    }
+    if (listDataRaw.length === 0) return new Response('List not found', { status: 404 });
+    const listData = listDataRaw[0];
+
+    // 2. Concurrently fetch Profile (for username) & List_Restaurants (for ranking)
+    const [profileRes, listRestRes] = await Promise.all([
+      fetch(`${supabaseUrl}/rest/v1/user_profiles?user_id=eq.${listData.user_id}&select=username`, { headers }),
+      fetch(`${supabaseUrl}/rest/v1/list_restaurants?list_id=eq.${listId}&select=restaurant_id,ranking&order=ranking.asc&limit=4`, { headers })
+    ]);
+
+    const profileData = await profileRes.json();
+    const listRestaurants = await listRestRes.json();
+
+    // 3. Fetch the actual Restaurant names
+    let restaurants = [];
+    if (Array.isArray(listRestaurants) && listRestaurants.length > 0) {
+      const restIds = listRestaurants.map(lr => lr.restaurant_id).join(',');
+      const restRes = await fetch(`${supabaseUrl}/rest/v1/restaurants?id=in.(${restIds})&select=id,name`, { headers });
+      const restData = await restRes.json();
+      
+      // Re-map the names back in their correct 1-to-4 ranked order
+      if (Array.isArray(restData)) {
+        restaurants = listRestaurants.map(lr => {
+           const r = restData.find(rest => String(rest.id) === String(lr.restaurant_id));
+           return { name: r ? r.name : 'Unknown Spot' };
+        });
       }
-    );
-
-    const data = await response.json();
-
-    // ==========================================
-    // THE DIAGNOSTIC CHECK GOES EXACTLY HERE
-    // ==========================================
-    
-    // NEW: Catch the Supabase error and print it directly to the screen
-    if (!Array.isArray(data)) {
-      return new Response(
-        `Supabase rejected the query. Error details: ${JSON.stringify(data)}`, 
-        { status: 500 }
-      );
     }
 
-    if (data.length === 0) {
-      return new Response('List not found', { status: 404 });
-    }
-    
-    // ==========================================
-
-    const listData = data[0];
-    
+    // 4. Assemble the final variables for the poster
     const title = listData.title || 'Gourmet List';
     const subtitle = listData.subtitle || 'Curated spots in NYC';
-    const username = listData.username || 'anonymous';
-    const restaurants = Array.isArray(listData.restaurants) ? listData.restaurants.slice(0, 4) : [];
+    const username = Array.isArray(profileData) && profileData.length > 0 ? profileData[0].username : 'anonymous';
 
-    // 3. Render the dynamic premium poster (Cream and Burgundy)
+    // 5. Render the dynamic premium poster (Cream and Burgundy)
     return new ImageResponse(
       (
         <div
@@ -127,7 +132,7 @@ export async function GET(request) {
                     color: '#3D0A1A',
                   }}
                 >
-                  {item.name || `Spot #${index + 1}`}
+                  {item.name}
                 </div>
               </div>
             ))}
