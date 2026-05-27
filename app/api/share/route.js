@@ -13,11 +13,12 @@ export async function GET(request) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
+    // We use the Service Role Key here to bypass RLS securely on the server
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
     const headers = {
-      'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'apikey': supabaseServiceKey,
+      'Authorization': `Bearer ${supabaseServiceKey}`,
       'Content-Type': 'application/json'
     };
 
