@@ -31,18 +31,26 @@ export async function GET(request) {
 
     const data = await response.json();
 
-    // 1. Antifragile check: Did Supabase hand us an error object instead of data?
-    if (data.error || data.message) {
-      return new Response(`Supabase Error: ${data.error || data.message}`, { status: 500 });
-    }
+    // ==========================================
+    // THE DIAGNOSTIC CHECK GOES EXACTLY HERE
+    // ==========================================
     
-    // 2. Safely verify it is actually an array before proceeding
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    // NEW: Catch the Supabase error and print it directly to the screen
+    if (!Array.isArray(data)) {
+      return new Response(
+        `Supabase rejected the query. Error details: ${JSON.stringify(data)}`, 
+        { status: 500 }
+      );
+    }
+
+    if (data.length === 0) {
       return new Response('List not found', { status: 404 });
     }
     
+    // ==========================================
+
     const listData = data[0];
-    // ... proceed with rendering
+    
     const title = listData.title || 'Gourmet List';
     const subtitle = listData.subtitle || 'Curated spots in NYC';
     const username = listData.username || 'anonymous';
