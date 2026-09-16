@@ -1,11 +1,10 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "WD9RBZ47G3.com.barbellapps.nyceats",
-        "paths": [
-          "/list/*"
+        "appIDs": ["WD9RBZ47G3.com.barbellapps.nyceats"],
+        "components": [
+          { "/": "/list/*" }
         ]
       }
     ]
